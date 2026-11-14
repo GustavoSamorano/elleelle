@@ -198,8 +198,13 @@ const isMesa=m=>m.linha==='Mesas';
 function opOf(m){ if(!isMesa(m)) return S.grupo; return m.ops.includes(S.acab)?S.acab:m.ops[0]; }
 function minPrice(m){const v=m.rows.filter(r=>!r.somar).flatMap(r=>r.pr).filter(x=>x!=null);return v.length?Math.min(...v):null}
 const unit=it=>it.preco*(it.say?1.15:1);
-const tecLab=it=>it.mesa?'':(it.op==='FORN'?(it.tecido?'Tecido fornecido: '+it.tecido:''):('Tecido '+(it.tecido||'a definir')));
-function tecCtl(it,i){ if(it.mesa)return '';
+const LAM=['Freijó','Nogueira','Jequitibá'], TONS=['Natural','Mel','Ebanizado'];
+const temTom=it=>!!it.mesa&&LAM.includes(it.op);
+const tecLab=it=>it.mesa?(temTom(it)?'Tonalidade '+(it.tom||'a definir'):''):(it.op==='FORN'?(it.tecido?'Tecido fornecido: '+it.tecido:''):('Tecido '+(it.tecido||'a definir')));
+function tecCtl(it,i){
+  if(temTom(it)){const l=TONS.slice();if(it.tom&&!l.includes(it.tom))l.unshift(it.tom);
+    return `<div class="tec"><select data-tom="${i}" class="${it.tom?'':'vz'}"><option value="">Tonalidade a definir</option>${l.map(c=>`<option ${c===it.tom?'selected':''}>${esc(c)}</option>`).join('')}</select></div>`}
+  if(it.mesa)return '';
   if(it.op==='FORN')return `<div class="tec"><input data-tecf="${i}" placeholder="Tecido fornecido (descrição)" value="${esc(it.tecido||'')}" maxlength="80"></div>`;
   const l=(T[it.op]||[]).slice(); if(it.tecido&&!l.includes(it.tecido))l.unshift(it.tecido); if(!l.length)return '';
   return `<div class="tec"><select data-tec="${i}" class="${it.tecido?'':'vz'}"><option value="">Tecido a definir · Grupo ${esc(it.op)}</option>${l.map(c=>`<option ${c===it.tecido?'selected':''}>${esc(c)}</option>`).join('')}</select></div>`}
@@ -297,8 +302,8 @@ document.addEventListener('click',async e=>{
   else if('sair' in d){await sb.auth.signOut()}
   else if(d.op){const m=M[S.model];if(isMesa(m))S.acab=d.op;else S.grupo=d.op;main();draft()}
   else if(d.add){const m=M[S.model],r=m.rows[+d.add],op=opOf(m),p=r.pr[m.ops.indexOf(op)];
-    const ex=c.items.find(it=>it.nome===m.nome&&it.ref===r.ref&&it.op===op&&!it.tecido);
-    if(ex)ex.q++;else c.items.push({nome:m.nome,op,oplab:isMesa(m)?(m.ops.length>1?op:'—'):(op==='FORN'?'Revestimento fornecido':'Grupo '+op),ref:r.ref,dims:r.dims,tec:r.tec,somar:r.somar,preco:p,q:1,say:false,mesa:isMesa(m),tecido:''});
+    const ex=c.items.find(it=>it.nome===m.nome&&it.ref===r.ref&&it.op===op&&!it.tecido&&!it.tom);
+    if(ex)ex.q++;else c.items.push({nome:m.nome,op,oplab:isMesa(m)?(m.ops.length>1?op:'—'):(op==='FORN'?'Revestimento fornecido':'Grupo '+op),ref:r.ref,dims:r.dims,tec:r.tec,somar:r.somar,preco:p,q:1,say:false,mesa:isMesa(m),tecido:'',tom:''});
     touch();main();side()}
   else if(d.q){const it=c.items[+d.i];it.q+=+d.q;if(it.q<1)c.items.splice(+d.i,1);touch();main();side()}
   else if(d.rm){c.items.splice(+d.rm,1);touch();main();side()}
@@ -314,7 +319,7 @@ document.addEventListener('click',async e=>{
     if(c.id===d.del){S.cur=novo();side()}
     S.hist=S.hist.filter(x=>x.id!==d.del);main();toast('Orçamento excluído.')}
 });
-document.addEventListener('change',e=>{const d=e.target.dataset;if(d.say!=null){S.cur.items[+d.say].say=e.target.checked;touch();side()}else if(d.tec!=null){S.cur.items[+d.tec].tecido=e.target.value;touch();side()}});
+document.addEventListener('change',e=>{const d=e.target.dataset;if(d.say!=null){S.cur.items[+d.say].say=e.target.checked;touch();side()}else if(d.tec!=null){S.cur.items[+d.tec].tecido=e.target.value;touch();side()}else if(d.tom!=null){S.cur.items[+d.tom].tom=e.target.value;touch();side()}});
 document.addEventListener('input',e=>{const i=e.target.dataset.tecf;if(i!=null){S.cur.items[+i].tecido=e.target.value;touch();stOnly()}});
 $('#cli').oninput=e=>{S.cur.cliente=e.target.value;touch();stOnly()};$('#ref').oninput=e=>{S.cur.ref=e.target.value;touch();stOnly()};
 $('#desc').oninput=e=>{S.cur.desc=parseFloat(String(e.target.value).replace(',','.'))||0;touch();const t=totals();$('#tot').textContent=brl(t.tot);stOnly()};
